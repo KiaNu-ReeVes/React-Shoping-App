@@ -1,0 +1,13 @@
+html {
+    --color-scheme: dark;
+}
+.custom-imgsize {
+    width: auto;
+    max-width: 250px;
+    height: auto;
+    max-height: 250px;
+    left: 0;
+    right: 0;
+    margin: auto;
+    filter: drop-shadow(0 2px 10px black);
+}
