@@ -1,103 +1,134 @@
 import React, { useState } from "react";
-import { Button, Modal, Form } from "react-bootstrap";
+import { Button, Form } from "react-bootstrap";
+import itemShop from "./components/shopitems";
+import LoginModal from "./components/loginform";
+import CartModal from "./components/cartModal";
+import Cookies from "js-cookie"; // وارد کردن کتابخانه js-cookie
 
 function IndexPage() {
-  const [showModal, setShowModal] = useState(false);
+  const [showloginModal, setShowloginModal] = useState(false);
+  const [showcartModal, setShowcartModal] = useState(false);
+  const [isLogin, setIsLogin] = useState(false);
+  const [cardlist, setCardList] = useState([]);
 
-  const isLogin = false;
+  function buyitemHandler(id: number) {
+    const userinfoCookie = Cookies.get("userinfo");
+    if (userinfoCookie) {
+      const userinfo = JSON.parse(userinfoCookie);
+      // چک کردن محتوای کوکی برای ورود
+      if (userinfo.email && userinfo.password) {
+        setIsLogin(true);
 
-  const itemShop = [
-    {
-      name: "Airpod Pro",
-      image: "/image/airpodpro.webp",
-      desc: "This headphone is very strange because it has a battery but it works without a battery. This written text is only for testing",
-    },
-    {
-      name: "Sony Sovellus",
-      image: "/image/sonysovellus.webp",
-      desc: "This headphone is very strange because it has a battery but it works without a battery. This written text is only for testing",
-    },
-    {
-      name: "Sony WH-CH720N",
-      image: "/image/WH-CH720N.webp",
-      desc: "This headphone is very strange because it has a battery but it works without a battery. This written text is only for testing",
-    },
-    {
-      name: "Nice Headphone",
-      image: "/image/Wireless.webp",
-      desc: "This headphone is very strange because it has a battery but it works without a battery. This written text is only for testing",
-    },
-  ];
+        // ایجاد مورد جدید با مقدار quantity
+        const newItem = { id: id, quantity: 1 }; // مثال: تعداد اولیه 1
 
-  function buyitemHandler() {
-    if (isLogin) {
-      // اقدامات برای خرید کالا
+        // بررسی آیا مورد مشابه در cardlist وجود دارد
+        const existingItem = cardlist.find((item) => item.id === id);
+
+        // اگر مورد مشابه وجود دارد، تعداد آن را افزایش دهید
+        if (existingItem) {
+          existingItem.quantity += 1;
+          setCardList([...cardlist]); // برای تحریک بروزرسانی وضعیت
+        } else {
+          // در غیر این صورت، مورد جدید را به cardlist اضافه کنید
+          setCardList((prevCardList) => [...prevCardList, newItem]);
+        }
+      } else {
+        setIsLogin(false);
+        setShowloginModal(true);
+      }
     } else {
-      setShowModal(true);
+      setIsLogin(false);
+      setShowloginModal(true);
     }
+  }
+  function getItemCountById(id: number): number {
+    // جمع کردن تمام مقادیر quantity برای موارد با id مشخص
+    const totalQuantity = cardlist
+      .filter((item) => item.id === id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+  
+    return totalQuantity;
+  }
+  
+  function updateItemCount(id: number, quantity: number) {
+    setCardList((prevCardList) => {
+      const updatedList = prevCardList.map((item) => {
+        if (item.id === id) {
+          // اگر مورد با id مشخص باشد، تعداد آن را با مقدار quantity افزایش یا کاهش دهید
+          item.quantity -= quantity;
+        }
+        return item;
+      });
+
+      // حذف موارد با تعداد 0 از لیست
+      const filteredList = updatedList.filter((item) => item.quantity !== 0);
+
+      return filteredList;
+    });
+  }
+  function renderQuantityButtons(index) {
+    const itemCount = getItemCountById(index);
+
+    return (
+      <div>
+        <button className="btn btn-outline-secondary mx-2" onClick={() => buyitemHandler(index)}>+</button>
+        <span className="fs-5 btn btn-outline-secondary">{itemCount}</span>
+        <button className="btn btn-outline-secondary mx-2" onClick={() => updateItemCount(index, 1)}>-</button>
+        <br />
+        <button className="btn btn-outline-secondary m-3" onClick={() => updateItemCount(index, itemCount)}>Remove From Cart</button>
+      </div>
+    );
   }
 
   return (
     <div className="container-lg">
       <div className="row">
-        <div className="col-12 fs-1 fw-bold py-4">Item Shop</div>
+        <div className="col-12 fs-1 fw-bold py-4 d-inline">
+          Item Shop{" "}
+          <div
+            className="btn btn-secondary float-end mt-2 position-relative"
+            onClick={() => setShowcartModal(true)}
+          >Cart
+            {cardlist.length > 0 && (
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    {cardlist.length}
+                </span>
+            )}
+          </div>
+        </div>
       </div>
       <div className="row">
         {itemShop.map((item, index) => (
-          <div
-            key={index}
-            className="card col-3 text-center justify-content-center p-3"
-          >
-            <img
-              src={item.image}
-              className="card-img-top custom-imgsize"
-              alt={item.name}
-            ></img>
-            <div className="card-body">
-              <h5 className="card-title">{item.name}</h5>
-              <p className="card-text">{item.desc}</p>
-              <div onClick={buyitemHandler} className="btn btn-primary">
-                Buy Item
+          <div className="col-3" key={index}>
+            <div className="card text-center justify-content-center p-3">
+              <img
+                src={item.image}
+                className="card-img-top custom-imgsize"
+                alt={item.name}
+              ></img>
+              <div className="card-body">
+                <h5 className="card-title">{item.name}</h5>
+                <p className="card-text">{item.desc}</p>
+                {getItemCountById(index) > 0 ? (
+                  renderQuantityButtons(index)
+                ) : (
+                  <div
+                    onClick={() => buyitemHandler(index)}
+                    className="btn btn-primary"
+                  >
+                    Buy Item
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
-      <Modal show={showModal} onHide={() => setShowModal(false)} 
-        backdrop="static"
-        centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Login Form</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-              <Form.Label>Email address</Form.Label>
-              <Form.Control
-                type="email"
-                placeholder="name@example.com"
-                autoFocus
-              />
-            </Form.Group>
-            <Form.Group className="mb-3" controlId="exampleForm.ControlInput2">
-              <Form.Label>Password</Form.Label>
-              <Form.Control
-                type="password"
-                placeholder="Your Password"
-                autoFocus
-              />
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Close
-          </Button>
-          <Button variant="primary" onClick={() => setShowModal(false)}>
-            Save Changes
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* اضافه کردن Modal */}
+      <LoginModal showloginModal={showloginModal} setShowloginModal={setShowloginModal} />
+      {/* اضافه کردن Modal */}
+      <CartModal showModal={showcartModal} setShowModal={setShowcartModal} cardlist={cardlist} updateItemCount={updateItemCount} itemShop={itemShop} setCardList={setCardList}  />
     </div>
   );
 }
